@@ -38,6 +38,7 @@ class Client():
         await self.connection.send(json.dumps(packages))
 
     async def run(self):
+        #Need to steal some code from archipelago to make it work with non-secure servers or add it's own SSL
         async with connect(f"wss://{self.client_config.address}:{self.client_config.port}") as websocket:
             self.connection = websocket
             temp_room_info = json.loads((await self.connection.recv()))[0]
