@@ -5,8 +5,12 @@ from typing import Dict
 from .server import *
 from .client import *
 
-
 def create_packet_object(plain_packet : Dict):
+	"""A black magic function that takes in packets received 
+		and turns them into python server classes when it is possible
+		
+		Might get reworked later because it looks kinda jank
+		"""
 	if isinstance(plain_packet, str):
 		plain_packet = json.loads(plain_packet)
 	if isinstance(plain_packet, list):

@@ -4,14 +4,12 @@ from typing import Dict, List, NamedTuple, Optional, TypedDict
 
 from .enums import SlotType
 
-
 class JSONMessagePart(TypedDict):
     type: Optional[str]
     text: Optional[str]
     color: Optional[str] # only available if type is a color
     flags: Optional[int] # only available if type is an item_id or item_name
     player: Optional[int] # only available if type is either item or location
-
 
 class Version(NamedTuple):
     major: int

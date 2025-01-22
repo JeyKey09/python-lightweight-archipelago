@@ -1,3 +1,5 @@
+"""Enums defined in the network diagram documentation"""
+
 import enum
 
 class SlotType(enum.IntFlag):
@@ -44,4 +46,6 @@ class ItemsHandlingFlags(enum.IntEnum):
     ReceiveNone = 0b000
     ReceiveItems = 0b001
     ReceieveFromSelf = 0b010
+    """Needs to be combined with RecieveItems"""
     RecieveStartInventory = 0b100
+    """Needs to be combined with RecieveItems"""

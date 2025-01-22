@@ -40,6 +40,7 @@ class RoomInfo():
 
     time : float
     """The time for now"""
+
 @dataclass
 class ConnectionRefused():
     errors : list[str]
