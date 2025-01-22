@@ -2,13 +2,11 @@ import json
 import uuid
 from packets import create_packet_object
 from websockets.asyncio.client import connect 
-from packets.core import Version
+from packets.core import DataPackageObject, Version
 from packets.server import RoomInfo
+from packets.client import Connect, GetDataPackage
 
 class GameConfig:
-    game : str
-    items_handling : int
-
     def __init__(self, game : str, items_handling : int = 0b011):
         self.game = game
         self.items_handling = items_handling
@@ -24,7 +22,6 @@ class ClientConfig:
         self.address = address
 
 class Client():
-
     def __init__(self, client_config : ClientConfig, game_config : GameConfig):
         self.client_config = client_config
         self.game_config = game_config
@@ -32,12 +29,13 @@ class Client():
         self.packages_received = []
         self.connection = None
     
-    def __send_package(self, packages):
-        if isinstance(packages, list):
+    async def __send_packages(self, packages):
+        if not isinstance(packages, list):
             packages = [packages]
         for i,package in enumerate(packages):
-            packages[i]["cmd"] = str(package.__classname__)
-        self.connection.send(json.dumps(packages))
+            packages[i] = package.__dict__
+            packages[i]["cmd"] = type(package).__name__
+        await self.connection.send(json.dumps(packages))
 
     async def run(self):
         async with connect(f"wss://{self.client_config.address}:{self.client_config.port}") as websocket:
@@ -46,4 +44,5 @@ class Client():
             room_info : RoomInfo = create_packet_object(temp_room_info)
             if not room_info.games.__contains__(self.game_config.game):
                 raise RuntimeError("Server does not contain the game")
-            self.__send_package([])
+            # await self.__send_packages([GetDataPackage([self.game_config.game])])
+            # data_package = create_packet_object((await self.connection.recv()))

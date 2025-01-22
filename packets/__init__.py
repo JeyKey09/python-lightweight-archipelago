@@ -9,6 +9,11 @@ from .client import *
 def create_packet_object(plain_packet : Dict):
 	if isinstance(plain_packet, str):
 		plain_packet = json.loads(plain_packet)
+	if isinstance(plain_packet, list):
+		for i,value in enumerate(plain_packet):
+			plain_packet[i] = create_packet_object(value)
+		return plain_packet
+	
 	cls = globals()[plain_packet.get("cmd") or plain_packet.get("class")]
 	if cls == None:
 		raise ValueError("Class, not found")

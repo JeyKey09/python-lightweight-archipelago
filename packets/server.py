@@ -1,10 +1,12 @@
 """Packets the server sends"""
 
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 from .core import DataPackageObject, JSONMessagePart, NetworkItem, NetworkSlot, Version, NetworkPlayer
 from .core.enums import Permission, PrintJsonType
 
-class RoomInfo:
+@dataclass
+class RoomInfo():
     """Sent after Client connects to server"""
     
     version : Version
@@ -38,10 +40,11 @@ class RoomInfo:
 
     time : float
     """The time for now"""
-
+@dataclass
 class ConnectionRefused():
     errors : list[str]
 
+@dataclass
 class Connected():
     team : int
     slot : int
@@ -52,19 +55,23 @@ class Connected():
     slot_info : Dict[int, NetworkSlot]
     hint_points : int 
 
+@dataclass
 class ReceivedItems:
     """Sent to clients when they receive an item."""
     
     index : int
     items : List[NetworkItem]
 
+@dataclass
 class LocationInfo:
     locations : List[NetworkItem]
 
+@dataclass
 class RoomUpdate(RoomInfo, Connected):
     players : List[NetworkPlayer]
     checked_locations : List[int]
 
+@dataclass
 class PrintJSON:
     data : List[JSONMessagePart]
     type : PrintJsonType
@@ -77,23 +84,28 @@ class PrintJSON:
     tags : List[str]
     countdown : int
 
+@dataclass
 class DataPackage:
     data : DataPackageObject
 
+@dataclass
 class Bounced:
     games : List[str]
     slots : List[str]
     tags : List[str]
     data : Dict
 
+@dataclass
 class InvalidPacket:
     type : str
     original_cmd : Optional[str]
     text : str
 
+@dataclass
 class Retrieved:
     keys : Dict[str, any]
 
+@dataclass
 class SetReply:
     key : str
     value : any
