@@ -1,8 +1,8 @@
 """Packets the client sends"""
 
 from typing import Dict, List
-from data.core import DataStorageOperation, Version
-from data.data_enums import ClientStatus
+from .core import DataStorageOperation, Version
+from .core.enums import ClientStatus
 
 class Connect:
     password : str
@@ -30,10 +30,13 @@ class LocationScouts:
     """If non-zero then scout and broadcast. If 2 only broadcast new hints"""
 
 class StatusUpdate:
-    status : ClientStatus[int]
+    status : ClientStatus
 
 class Say:
     text : str
+
+class GetDataPackage:
+    games : List[str]
 
 class Bounce:
     games : List[str]

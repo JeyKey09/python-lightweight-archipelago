@@ -1,7 +1,8 @@
 
+from dataclasses import dataclass
 from typing import Dict, List, NamedTuple, Optional, TypedDict
 
-from .data_enums import SlotType
+from .enums import SlotType
 
 class JSONMessagePart(TypedDict):
     type: Optional[str]
@@ -10,10 +11,15 @@ class JSONMessagePart(TypedDict):
     flags: Optional[int] # only available if type is an item_id or item_name
     player: Optional[int] # only available if type is either item or location
 
-class Version(NamedTuple):
+@dataclass
+class Version:
     major: int
     minor: int
     build: int
+
+    @staticmethod
+    def get_current():
+        return Version(major=0,minor=5,build=1)
 
 class NetworkItem(NamedTuple):
     item: int

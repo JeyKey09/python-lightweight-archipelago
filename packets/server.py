@@ -1,11 +1,10 @@
 """Packets the server sends"""
 
 from typing import Dict, List, Optional
-from . import Packet
-from core import DataPackageObject, JSONMessagePart, NetworkItem, NetworkSlot, Version, NetworkPlayer
-from data_enums import Permission, PrintJsonType
+from .core import DataPackageObject, JSONMessagePart, NetworkItem, NetworkSlot, Version, NetworkPlayer
+from .core.enums import Permission, PrintJsonType
 
-class RoomInfo(Packet):
+class RoomInfo:
     """Sent after Client connects to server"""
     
     version : Version
@@ -20,7 +19,7 @@ class RoomInfo(Packet):
     password : bool
     """If it requires password"""
     
-    permissions : dict[str, Permission[int]]
+    permissions : dict[str, Permission]
     """Mapping permission name to keys"""
     
     hint_cost : int
@@ -40,7 +39,7 @@ class RoomInfo(Packet):
     time : float
     """The time for now"""
 
-class ConnectionRefused(Packet):
+class ConnectionRefused():
     errors : list[str]
 
 class Connected():
