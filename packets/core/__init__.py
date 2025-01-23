@@ -11,14 +11,15 @@ class JSONMessagePart(TypedDict):
     flags: Optional[int] # only available if type is an item_id or item_name
     player: Optional[int] # only available if type is either item or location
 
-class Version(NamedTuple):
+@dataclass
+class Version:
     major: int
     minor: int
     build: int
 
     @staticmethod
     def get_current():
-        return Version(major=0,minor=5,build=1)
+        return Version(major=0,minor=0,build=0)
 
 @dataclass
 class NetworkItem(NamedTuple):

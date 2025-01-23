@@ -64,7 +64,7 @@ class Get:
 @dataclass
 class Set:
     key : str
-    defualt : any
+    default : any
     want_reply : bool
     operations : List[DataStorageOperation]
 

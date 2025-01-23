@@ -36,9 +36,12 @@ class Client():
             packages[i] = package.__dict__
             packages[i]["cmd"] = type(package).__name__
         await self.connection.send(json.dumps(packages))
+    
+    async def process_server_package():
+        sds
 
     async def run(self):
-        #Need to steal some code from archipelago to make it work with non-secure servers or add it's own SSL
+        #TODO: Need to steal some code from archipelago to make it work with non-secure servers or add it's own SSL
         async with connect(f"wss://{self.client_config.address}:{self.client_config.port}") as websocket:
             self.connection = websocket
             temp_room_info = json.loads((await self.connection.recv()))[0]
@@ -46,4 +49,6 @@ class Client():
             if not room_info.games.__contains__(self.game_config.game):
                 raise RuntimeError("Server does not contain the game")
             # await self.__send_packages([GetDataPackage([self.game_config.game])])
-            # data_package = create_packet_object((await self.connection.recv()))
+            await self.__send_packages(Connect(self.client_config.password, self.game_config.game, self.client_config.player, self.client_config.client, self.client_config.version, self.game_config.items_handling, [], True))
+            data_package = create_packet_object((await self.connection.recv()))
+            print(data_package)
