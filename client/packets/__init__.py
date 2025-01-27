@@ -19,10 +19,10 @@ def create_packet_object(plain_packet : Dict):
 		return plain_packet
 	
 	cls = globals()[plain_packet.get("cmd") or plain_packet.get("class")]
-	if cls == None:
+	if cls is None:
 		raise ValueError("Class, not found")
-	del plain_packet["cmd" if plain_packet.get("cmd") != None else "class"]
+	del plain_packet["cmd" if plain_packet.get("cmd") is not None else "class"]
 	for (key,value) in plain_packet.items():
-		if isinstance(value,dict) and (value.get("class") != None):
+		if isinstance(value,dict) and (value.get("class") is not None):
 			plain_packet[key] = create_packet_object(value)
 	return cls(**plain_packet)
