@@ -1,48 +1,50 @@
 import asyncio
+from enum import Enum
 import inspect
 import json 
 import uuid
 from websockets.asyncio.client import connect 
 from .packets.core import GameData, NetworkItem, NetworkPlayer, NetworkSlot, Version
-from .packets.core.enums import Permission
+from .packets.core.enums import ItemsHandlingFlags, Permission
 from .packets.server import *
 from .packets.client import Connect
 from queue import Queue
 
 def as_packet(obj : dict):
-	"""	Filters the special packets, modifies the dictionary 
+    """	Filters the special packets, modifies the dictionary 
     	and casts it into the appropriate object
             
-		Returns None if this is not a packets
-	"""
-	if isinstance(obj, list):
-		for i,v in enumerate(obj):
-			obj[i] = as_packet(v)
-		return obj
-	if "cmd" in obj:
-		if obj["cmd"].__eq__("RoomInfo"):
-			obj["version"] = Version(obj["version"]["major"], 
+        Returns None if this is not a packets
+    """
+    if isinstance(obj, list):
+        for i,v in enumerate(obj):
+            obj[i] = as_packet(v)
+        return obj
+    if "cmd" in obj:
+        if obj["cmd"].__eq__("RoomInfo"):
+            obj["version"] = Version(obj["version"]["major"], 
                                     obj["version"]["minor"], 
                                     obj["version"]["build"])
            
-			obj["generator_version"] =  Version(obj["generator_version"]["major"], 
+            obj["generator_version"] =  Version(obj["generator_version"]["major"], 
                                                      obj["generator_version"]["minor"], 
                                                      obj["generator_version"]["build"]),
-			obj["permissions"] = {k:Permission(i) for k,i in obj["permissions"].items()}
+            obj["permissions"] = {k:Permission(i) for k,i in obj["permissions"].items()}
             
-		elif obj["cmd"].__eq__("Connected"):
-			obj["players"] = [NetworkPlayer(**player) for player in obj["players"]]
-			obj["slot_info"] = {k:NetworkSlot(**slot) for k,slot in obj["players"].items()}
+        elif obj["cmd"].__eq__("Connected"):
+            del obj["players"]["class"]
+            obj["players"] = [NetworkPlayer(**player) for player in obj["players"]]
+            obj["slot_info"] = {k:NetworkSlot(**slot) for k,slot in obj["players"].items()}
             
-		elif obj["cmd"].__eq__("ReceivedItems"):
-			obj["items"] = [NetworkItem(**item) for item in obj["items"]]
+        elif obj["cmd"].__eq__("ReceivedItems"):
+            obj["items"] = [NetworkItem(**item) for item in obj["items"]]
             
-		elif obj["cmd"].__eq__("DataPackageObject"):
-			obj["games"] = {k:GameData(**data) for k,data in obj["games"].items()}
+        elif obj["cmd"].__eq__("DataPackageObject"):
+            obj["games"] = {k:GameData(**data) for k,data in obj["games"].items()}
 
-		cls = globals()[obj.get("cmd")]
-		del obj["cmd"]
-		return cls(**obj)
+        cls = globals()[obj.get("cmd")]
+        del obj["cmd"]
+        return cls(**obj)
     
 def encode_packet(obj):
     if isinstance(obj, list):
@@ -55,6 +57,8 @@ def encode_packet(obj):
         data = obj._asdict()
         data["class"] = obj.__class__.__name__
         return data
+    elif isinstance(obj, Enum) and hasattr(obj, "value"):
+        return obj.value
     elif hasattr(obj, '__dict__'):
         obj_copy = {}
         try:
@@ -69,7 +73,7 @@ def encode_packet(obj):
         
 
 class GameConfig:
-    def __init__(self, game : str, items_handling : int = 0b011):
+    def __init__(self, game : str, items_handling : ItemsHandlingFlags = ItemsHandlingFlags.ReceiveItems):
         self.game = game
         self.items_handling = items_handling
 

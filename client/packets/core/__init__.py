@@ -12,7 +12,6 @@ class JSONMessagePart():
     flags: Optional[int] # only available if type is an item_id or item_name
     player: Optional[int] # only available if type is either item or location
 
-
 class Version(NamedTuple):
     major: int = 0
     minor: int = 5
@@ -25,8 +24,7 @@ class NetworkItem:
     player: int
     flags: int
 
-@dataclass
-class NetworkPlayer:
+class NetworkPlayer(NamedTuple):
     team: int
     slot: int
     alias: str
