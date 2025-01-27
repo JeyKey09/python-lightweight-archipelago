@@ -72,18 +72,13 @@ class RoomUpdate(RoomInfo, Connected):
     players : List[NetworkPlayer]
     checked_locations : List[int]
 
+
+#Make subclasses of the different packets of PrintJSON
+#or mark them as optional parameters
 @dataclass
 class PrintJSON:
     data : List[JSONMessagePart]
     type : PrintJsonType
-    receiving : int
-    item : NetworkItem
-    found : bool
-    team : int
-    slot : int
-    message : str
-    tags : List[str]
-    countdown : int
 
 @dataclass
 class DataPackage:

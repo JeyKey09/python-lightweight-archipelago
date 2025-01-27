@@ -10,7 +10,7 @@ from .packets.server import *
 from .packets.client import Connect
 from queue import Queue
 
-def as_packet(obj : dict):
+def decode_packet(obj : dict):
     """	Filters the special packets, modifies the dictionary 
     	and casts it into the appropriate object
             
@@ -18,33 +18,18 @@ def as_packet(obj : dict):
     """
     if isinstance(obj, list):
         for i,v in enumerate(obj):
-            obj[i] = as_packet(v)
+            obj[i] = decode_packet(v)
         return obj
-    if "cmd" in obj:
-        if obj["cmd"].__eq__("RoomInfo"):
-            obj["version"] = Version(obj["version"]["major"], 
-                                    obj["version"]["minor"], 
-                                    obj["version"]["build"])
-           
-            obj["generator_version"] =  Version(obj["generator_version"]["major"], 
-                                                     obj["generator_version"]["minor"], 
-                                                     obj["generator_version"]["build"]),
-            obj["permissions"] = {k:Permission(i) for k,i in obj["permissions"].items()}
-            
-        elif obj["cmd"].__eq__("Connected"):
-            del obj["players"]["class"]
-            obj["players"] = [NetworkPlayer(**player) for player in obj["players"]]
-            obj["slot_info"] = {k:NetworkSlot(**slot) for k,slot in obj["players"].items()}
-            
-        elif obj["cmd"].__eq__("ReceivedItems"):
-            obj["items"] = [NetworkItem(**item) for item in obj["items"]]
-            
-        elif obj["cmd"].__eq__("DataPackageObject"):
-            obj["games"] = {k:GameData(**data) for k,data in obj["games"].items()}
-
-        cls = globals()[obj.get("cmd")]
-        del obj["cmd"]
+    if "cmd" in obj or "class" in obj:
+        cls = globals()[obj.get("cmd") or obj.get("class")]
+        del obj["cmd" if obj.get("cmd") != None else "class"]
+        if cls == PrintJSON:
+            obj = {"type": obj["type"], "data": obj["data"]} 
+        for i in inspect.getmembers(obj):
+            if not i[0].startswith('_') and not inspect.ismethod(i[1]) and not inspect.isbuiltin(i[1]):
+                obj[i[0]] = decode_packet(getattr(obj, i[0]))
         return cls(**obj)
+
     
 def encode_packet(obj):
     if isinstance(obj, list):
@@ -110,7 +95,7 @@ class Client():
     
     async def __process_server_packages(self):
         while(self.active):
-            packets = as_packet(json.loads(await self.connection.recv()))
+            packets = decode_packet(json.loads(await self.connection.recv()))
             if packets is None:
                 continue
             for packet in packets:
@@ -130,13 +115,19 @@ class Client():
     async def run(self):
         if not self.active:
             self.active = True
+        counter = 0
         while(self.active):
             try:
                 #TODO: Need to steal some code from archipelago to make it work with non-secure servers or add it's own SSL
                 self.connection = await connect(f"wss://{self.client_config.address}:{self.client_config.port}")
+                counter = 0
                 await asyncio.gather(
                     asyncio.create_task(self.__process_server_packages()),
                     asyncio.create_task(self.__send_packages())
                 )
             except ConnectionRefusedError as e:
-                print("Connection refused") 
+                counter += 1
+                print(f"Connection refused, {counter}/3 tries")
+                if counter >= 3:
+                    self.active = False
+                 
