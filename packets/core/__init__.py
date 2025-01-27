@@ -4,7 +4,8 @@ from typing import Dict, List, NamedTuple, Optional, TypedDict
 
 from .enums import SlotType
 
-class JSONMessagePart(TypedDict):
+@dataclass
+class JSONMessagePart():
     type: Optional[str]
     text: Optional[str]
     color: Optional[str] # only available if type is a color
@@ -13,37 +14,33 @@ class JSONMessagePart(TypedDict):
 
 @dataclass
 class Version:
-    major: int
-    minor: int
-    build: int
-
-    @staticmethod
-    def get_current():
-        return Version(major=0,minor=0,build=0)
+    major: int = 0
+    minor: int = 0
+    build: int = 0
 
 @dataclass
-class NetworkItem(NamedTuple):
+class NetworkItem:
     item: int
     location: int
     player: int
     flags: int
 
 @dataclass
-class NetworkPlayer(NamedTuple):
+class NetworkPlayer:
     team: int
     slot: int
     alias: str
     name: str
 
 @dataclass
-class NetworkSlot(NamedTuple):
+class NetworkSlot:
    name: str
    game: str
    type: SlotType
-   group_members: List[int] = []  # only populated if type == group
+   group_members: List[int]   # only populated if type == group
 
 @dataclass
-class Hint(NamedTuple):
+class Hint:
     receiving_player: int
     finding_player: int
     location: int
@@ -53,16 +50,16 @@ class Hint(NamedTuple):
     item_flags: int = 0
 
 @dataclass
-class GameData(NamedTuple):
+class GameData:
     item_name_to_id : Dict[str, int]
     location_name_to_id : Dict[str, int]
     checksum : str
 
 @dataclass
-class DataPackageObject(NamedTuple):
+class DataPackageObject:
     games : Dict[str, GameData]
 
 @dataclass
-class DataStorageOperation(NamedTuple):
+class DataStorageOperation:
     operation : str
     value : any
