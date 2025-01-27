@@ -24,7 +24,7 @@ def decode_packet(obj : dict):
         return obj
     if "cmd" in obj or "class" in obj:
         cls = globals()[obj.get("cmd") or obj.get("class")]
-        del obj["cmd" if obj.get("cmd") != None else "class"]
+        del obj["cmd" if obj.get("cmd") is not None else "class"]
         if cls == PrintJSON:
             obj = {"type": obj["type"], "data": obj["data"]} 
         for i in inspect.getmembers(obj):
