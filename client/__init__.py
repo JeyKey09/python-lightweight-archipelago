@@ -42,12 +42,12 @@ def as_packet(obj : dict):
 		del obj["cmd"]
 		return cls(**obj)
     
-def encode_packet(obj):
-    if isinstance(obj, list):
-        for i,v in enumerate(obj):
-              obj[i] = as_packet(v)
-			return obj
-    elif 
+# def encode_packet(obj):
+#     if isinstance(obj, list):
+#         for i,v in enumerate(obj):
+#               obj[i] = as_packet(v)
+# 			return obj
+#     elif 
 
 class GameConfig:
     def __init__(self, game : str, items_handling : int = 0b011):
