@@ -12,8 +12,8 @@ class JSONMessagePart():
     flags: Optional[int] # only available if type is an item_id or item_name
     player: Optional[int] # only available if type is either item or location
 
-@dataclass
-class Version:
+
+class Version(NamedTuple):
     major: int = 0
     minor: int = 0
     build: int = 0

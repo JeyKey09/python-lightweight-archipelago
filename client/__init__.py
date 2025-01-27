@@ -1,3 +1,5 @@
+import asyncio
+import inspect
 import json 
 import uuid
 from packets import create_packet_object
@@ -6,6 +8,7 @@ from packets.core import DataPackageObject, GameData, NetworkItem, NetworkPlayer
 from packets.core.enums import Permission
 from packets.server import *
 from packets.client import Connect, GetDataPackage
+from queue import Queue
 
 def as_packet(obj : dict):
 	"""	Filters the special packets, modifies the dictionary 
@@ -42,12 +45,29 @@ def as_packet(obj : dict):
 		del obj["cmd"]
 		return cls(**obj)
     
-# def encode_packet(obj):
-#     if isinstance(obj, list):
-#         for i,v in enumerate(obj):
-#               obj[i] = as_packet(v)
-# 			return obj
-#     elif 
+def encode_packet(obj):
+    if isinstance(obj, list):
+        for i,v in enumerate(obj):
+            obj[i] = as_packet(v)
+        return obj
+    #Archipelagos method to ensure that the packet is encoded correctly
+    #Taken from line 97 in the NetUtils
+    elif isinstance(obj, tuple) and hasattr(obj, "_fields"): 
+        data = obj._asdict()
+        data["class"] = obj.__class__.__name__
+        return data
+    elif hasattr(obj, '__dict__'):
+        obj_copy = {}
+        try:
+            obj_copy = obj.__dict__
+        except AttributeError:
+            pass 
+        for i in inspect.getmembers(obj):
+            if not i[0].startswith('_') and not inspect.ismethod(i[1]):
+                obj_copy[i[0]] = encode_packet(getattr(obj, i[0]))
+        obj = obj_copy
+    return obj 
+        
 
 class GameConfig:
     def __init__(self, game : str, items_handling : int = 0b011):
@@ -68,31 +88,52 @@ class Client():
     def __init__(self, client_config : ClientConfig, game_config : GameConfig):
         self.client_config = client_config
         self.game_config = game_config
-        self.packages_to_be_sent = []
-        self.packages_received = []
-        self.connection = None
+        self.active = True
+        self._packages_to_be_sent = Queue()
+        self._connection = None
+        
+    def add_package(self, package):
+        self._packages_to_be_sent.put(package)
     
-    async def __send_packages(self, packages):
-        if not isinstance(packages, list):
-            packages = [packages]
-        for i,package in enumerate(packages):
-            packages[i] = package.__dict__
-            packages[i]["cmd"] = type(package).__name__
-        await self.connection.send(json.dumps(packages))
+    async def __send_packages(self):
+        while(self.active):
+            if not self._packages_to_be_sent.empty():
+                packages = [self._packages_to_be_sent.get() in range(min(self._packages_to_be_sent.qsize(), 10))]
+                for i,package in enumerate(packages):
+                    packages[i] = encode_packet(package)
+                    packages[i]["cmd"] = type(package).__name__
+                await self.connection.send(json.dumps(packages))
+            await asyncio.sleep(0.1)
     
-    async def process_server_packages():
-        sds
+    async def __process_server_packages(self):
+        while(self.active):
+            packets = as_packet(json.loads(await self.connection.recv()))
+            if packets is None:
+                continue
+            for packet in packets:
+                if isinstance(packet, RoomInfo):
+                    self.add_package(
+                        Connect(self.client_config.password, self.game_config.game, self.client_config.player, 
+                                self.client_config.client, self.client_config.version, self.game_config.items_handling, [], True)
+                        )
+                elif isinstance(packet, Connected):
+                    self.connected = packet
+                elif isinstance(packet, ReceivedItems):
+                    self.received_items = packet
+                else:
+                    print(f"Unknown packet: {packet}")
+        
 
     async def run(self):
-        #TODO: Need to steal some code from archipelago to make it work with non-secure servers or add it's own SSL
-        async with connect(f"wss://{self.client_config.address}:{self.client_config.port}") as websocket:
-            self.connection = websocket
-            room_info = as_packet(json.loads(await self.connection.recv()))[0]
-            #room_info : RoomInfo = create_packet_object(temp_room_info)
-            if not room_info.games.__contains__(self.game_config.game):
-                raise RuntimeError("Server does not contain the game")
-            #await self.__send_packages([GetDataPackage([self.game_config.game])])
-            
-            await self.__send_packages(Connect(self.client_config.password, self.game_config.game, self.client_config.player, self.client_config.client, self.client_config.version, self.game_config.items_handling, [], True))
-            data_package = create_packet_object((await self.connection.recv()))
-            print(data_package)
+        if not self.active:
+            self.active = True
+        while(self.active):
+            try:
+                #TODO: Need to steal some code from archipelago to make it work with non-secure servers or add it's own SSL
+                self.connection = await connect(f"wss://{self.client_config.address}:{self.client_config.port}")
+                await asyncio.gather(
+                    asyncio.run(self.__process_server_packages()),
+                    asyncio.run(self.__send_packages())
+                )
+            except ConnectionRefusedError as e:
+                print("Connection refused") 
