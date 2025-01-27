@@ -36,7 +36,7 @@ def decode_packet(obj : dict):
 def encode_packet(obj):
     if isinstance(obj, list):
         for i,v in enumerate(obj):
-            obj[i] = as_packet(v)
+            obj[i] = encode_packet(v)
         return obj
     #Archipelagos method to ensure that the packet is encoded correctly
     #Taken from line 97 in the NetUtils
