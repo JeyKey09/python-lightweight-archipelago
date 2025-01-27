@@ -4,11 +4,13 @@ import inspect
 import json 
 import uuid
 from websockets.asyncio.client import connect 
-from .packets.core import GameData, NetworkItem, NetworkPlayer, NetworkSlot, Version
-from .packets.core.enums import ItemsHandlingFlags, Permission
-from .packets.server import *
 from .packets.client import Connect
 from queue import Queue
+from .packets.core.enums import ItemsHandlingFlags, Permission
+#Import types into the namespace to be able to decode them
+from .packets.server import *
+from .packets.core import *
+
 
 def decode_packet(obj : dict):
     """	Filters the special packets, modifies the dictionary 
