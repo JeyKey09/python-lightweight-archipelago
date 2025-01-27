@@ -2,12 +2,11 @@ import asyncio
 import inspect
 import json 
 import uuid
-from packets import create_packet_object
 from websockets.asyncio.client import connect 
-from packets.core import DataPackageObject, GameData, NetworkItem, NetworkPlayer, NetworkSlot, Version
+from packets.core import GameData, NetworkItem, NetworkPlayer, NetworkSlot, Version
 from packets.core.enums import Permission
 from packets.server import *
-from packets.client import Connect, GetDataPackage
+from packets.client import Connect
 from queue import Queue
 
 def as_packet(obj : dict):
