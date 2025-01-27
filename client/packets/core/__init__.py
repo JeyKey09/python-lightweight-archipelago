@@ -15,8 +15,8 @@ class JSONMessagePart():
 
 class Version(NamedTuple):
     major: int = 0
-    minor: int = 0
-    build: int = 0
+    minor: int = 5
+    build: int = 1
 
 @dataclass
 class NetworkItem:

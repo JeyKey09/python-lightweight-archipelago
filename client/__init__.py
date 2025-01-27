@@ -97,7 +97,7 @@ class Client():
     async def __send_packages(self):
         while(self.active):
             if not self._packages_to_be_sent.empty():
-                packages = [self._packages_to_be_sent.get() in range(min(self._packages_to_be_sent.qsize(), 10))]
+                packages = [self._packages_to_be_sent.get() for _ in range(min(self._packages_to_be_sent.qsize(), 10))]
                 for i,package in enumerate(packages):
                     packages[i] = encode_packet(package)
                     packages[i]["cmd"] = type(package).__name__
@@ -131,8 +131,8 @@ class Client():
                 #TODO: Need to steal some code from archipelago to make it work with non-secure servers or add it's own SSL
                 self.connection = await connect(f"wss://{self.client_config.address}:{self.client_config.port}")
                 await asyncio.gather(
-                    asyncio.run(self.__process_server_packages()),
-                    asyncio.run(self.__send_packages())
+                    asyncio.create_task(self.__process_server_packages()),
+                    asyncio.create_task(self.__send_packages())
                 )
             except ConnectionRefusedError as e:
                 print("Connection refused") 
