@@ -1,28 +1,51 @@
-"""Packets Util"""
+"""Utilities used when dealing with websocket packages in between server and client """
 
 import json
 from typing import Dict
 from .server import *
 from .client import *
 
-def create_packet_object(plain_packet : Dict):
-	"""A black magic function that takes in packets received 
-		and turns them into python server classes when it is possible
-		
-		Might get reworked later because it looks kinda jank
-		"""
-	if isinstance(plain_packet, str):
-		plain_packet = json.loads(plain_packet)
-	if isinstance(plain_packet, list):
-		for i,value in enumerate(plain_packet):
-			plain_packet[i] = create_packet_object(value)
-		return plain_packet
-	
-	cls = globals()[plain_packet.get("cmd") or plain_packet.get("class")]
-	if cls is None:
-		raise ValueError("Class, not found")
-	del plain_packet["cmd" if plain_packet.get("cmd") is not None else "class"]
-	for (key,value) in plain_packet.items():
-		if isinstance(value,dict) and (value.get("class") is not None):
-			plain_packet[key] = create_packet_object(value)
-	return cls(**plain_packet)
+def decode_packet(obj : dict):
+    """	Filters the special packets, modifies the dictionary 
+    	and casts it into the appropriate object
+            
+        Returns None if this is not a packet/s
+    """
+    if isinstance(obj, list):
+        for i,v in enumerate(obj):
+            obj[i] = decode_packet(v)
+        return obj
+    if "cmd" in obj or "class" in obj:
+        cls = globals()[obj.get("cmd") or obj.get("class")]
+        del obj["cmd" if obj.get("cmd") is not None else "class"]
+        if cls == PrintJSON:
+            obj = {"type": obj["type"], "data": obj["data"]} 
+        for i in inspect.getmembers(obj):
+            if not i[0].startswith('_') and not inspect.ismethod(i[1]) and not inspect.isbuiltin(i[1]):
+                obj[i[0]] = decode_packet(getattr(obj, i[0]))
+        return cls(**obj)
+
+    
+def encode_packet(obj):
+    """ Encodes the package into the standard archipelago wants 
+        so it can understand it.
+    """
+    if isinstance(obj, list):
+        for i,v in enumerate(obj):
+            obj[i] = encode_packet(v)
+        return obj
+    #Archipelagos method to ensure that the packet is encoded correctly
+    #Taken from line 97 in the NetUtils
+    elif isinstance(obj, tuple) and hasattr(obj, "_fields"): 
+        data = obj._asdict()
+        data["class"] = obj.__class__.__name__
+        return data
+    elif isinstance(obj, Enum) and hasattr(obj, "value"):
+        return obj.value
+    elif hasattr(obj, '__dict__'):
+        obj_copy = obj.__dict__
+        for i in inspect.getmembers(obj):
+            if not i[0].startswith('_') and not inspect.ismethod(i[1]):
+                obj_copy[i[0]] = encode_packet(getattr(obj, i[0]))
+        obj = obj_copy
+    return obj 

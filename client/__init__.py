@@ -1,63 +1,19 @@
+from abc import abstractmethod
 import asyncio
 from enum import Enum
 import inspect
 import json 
 import uuid
+from websockets import ConnectionClosed
 from websockets.asyncio.client import connect 
-from .packets.client import Connect
+from .packets.client import Connect, Sync
 from queue import Queue
-from .packets.core.enums import ItemsHandlingFlags, Permission
+from .packets.core.enums import ItemsHandlingFlags
+from .packets import  encode_packet, decode_packet
 #Import types into the namespace to be able to decode them
 from .packets.server import *
 from .packets.core import *
 
-
-def decode_packet(obj : dict):
-    """	Filters the special packets, modifies the dictionary 
-    	and casts it into the appropriate object
-            
-        Returns None if this is not a packets
-    """
-    if isinstance(obj, list):
-        for i,v in enumerate(obj):
-            obj[i] = decode_packet(v)
-        return obj
-    if "cmd" in obj or "class" in obj:
-        cls = globals()[obj.get("cmd") or obj.get("class")]
-        del obj["cmd" if obj.get("cmd") is not None else "class"]
-        if cls == PrintJSON:
-            obj = {"type": obj["type"], "data": obj["data"]} 
-        for i in inspect.getmembers(obj):
-            if not i[0].startswith('_') and not inspect.ismethod(i[1]) and not inspect.isbuiltin(i[1]):
-                obj[i[0]] = decode_packet(getattr(obj, i[0]))
-        return cls(**obj)
-
-    
-def encode_packet(obj):
-    if isinstance(obj, list):
-        for i,v in enumerate(obj):
-            obj[i] = encode_packet(v)
-        return obj
-    #Archipelagos method to ensure that the packet is encoded correctly
-    #Taken from line 97 in the NetUtils
-    elif isinstance(obj, tuple) and hasattr(obj, "_fields"): 
-        data = obj._asdict()
-        data["class"] = obj.__class__.__name__
-        return data
-    elif isinstance(obj, Enum) and hasattr(obj, "value"):
-        return obj.value
-    elif hasattr(obj, '__dict__'):
-        obj_copy = {}
-        try:
-            obj_copy = obj.__dict__
-        except AttributeError:
-            pass 
-        for i in inspect.getmembers(obj):
-            if not i[0].startswith('_') and not inspect.ismethod(i[1]):
-                obj_copy[i[0]] = encode_packet(getattr(obj, i[0]))
-        obj = obj_copy
-    return obj 
-        
 
 class GameConfig:
     def __init__(self, game : str, items_handling : ItemsHandlingFlags = ItemsHandlingFlags.ReceiveItems):
@@ -79,7 +35,9 @@ class Client():
         self.client_config = client_config
         self.game_config = game_config
         self.active = True
+        self.room_info = None
         self._packages_to_be_sent = Queue()
+        self._item_index = 0
         self._connection = None
         
     def add_package(self, package):
@@ -89,30 +47,83 @@ class Client():
         while(self.active):
             if not self._packages_to_be_sent.empty():
                 packages = [self._packages_to_be_sent.get() for _ in range(min(self._packages_to_be_sent.qsize(), 10))]
-                for i,package in enumerate(packages):
-                    packages[i] = encode_packet(package)
-                    packages[i]["cmd"] = type(package).__name__
-                await self.connection.send(json.dumps(packages))
+                try:
+                    for i,package in enumerate(packages):
+                        packages[i] = encode_packet(package)
+                        packages[i]["cmd"] = type(package).__name__
+                    await self.connection.send(json.dumps(packages))
+                except ConnectionClosed:
+                    print("The socket ended up closing. Shutting down thread")
+                    return
+                except Exception as e:
+                    print(f"Something went wrong, under the process {e.args}")
             await asyncio.sleep(0.1)
     
     async def __process_server_packages(self):
         while(self.active):
-            packets = decode_packet(json.loads(await self.connection.recv()))
-            if packets is None:
-                continue
-            for packet in packets:
-                if isinstance(packet, RoomInfo):
-                    self.add_package(
-                        Connect(self.client_config.password, self.game_config.game, self.client_config.player, 
-                                self.client_config.client, self.client_config.version, self.game_config.items_handling, [], True)
-                        )
-                elif isinstance(packet, Connected):
-                    self.connected = packet
-                elif isinstance(packet, ReceivedItems):
-                    self.received_items = packet
-                else:
-                    print(f"Unknown packet: {packet}")
-        
+            try:
+                packets = decode_packet(json.loads(await self.connection.recv()))
+                if packets is None:
+                    continue
+                for packet in packets:
+                    match packet: 
+                        case RoomInfo():
+                            self.room_info = packet
+                            self.add_package(
+                                Connect(self.client_config.password, self.game_config.game, self.client_config.player, 
+                                        self.client_config.client, self.client_config.version, self.game_config.items_handling, [], True)
+                                )
+                            
+                        case Connected():
+                            self.connected = packet
+                        
+                        case ConnectionRefused():
+                            print(packet.errors)
+
+                        case ReceivedItems():
+                            if packet.index == self._item_index+1:
+                                self._item_index += len(packet.items)
+                                self.resolveReceivedItem(packet)
+                            else:
+                                self._item_index = 0
+                                self.add_package(Sync())
+                    
+                        case LocationInfo():
+                            self.resolve_location_info(packet)
+                    
+                        case DataPackageObject():
+                            self.resolve_data_package(packet)
+
+                        case PrintJSON():
+                            self.handle_print(packet)
+                        
+                        case _:
+                            print(f"Unknown packet: {packet}")
+            except ConnectionClosed:
+                print("Socket closed for a client, closing the thread to return back")
+                return
+            except Exception as e:
+                print(f"Unexpected error has happened {e.args}")
+    
+    @abstractmethod
+    def resolve_received_items(self, items : ReceivedItems):
+        """Function called when a items are sent from the server"""
+        pass
+
+    @abstractmethod
+    def resolve_location_info(self, packet : LocationInfo):
+        """Function called when a locationInfo package is sent from the server"""
+        pass
+
+    @abstractmethod
+    def resolve_data_package(self, packet : DataPackageObject):
+        """Function called when a locationInfo package is sent from the server"""
+        pass
+
+    @abstractmethod
+    def handle_print(self, packet : PrintJSON):
+        """Function called when a PrintJSON package is sent from the server"""
+        pass
 
     async def run(self):
         if not self.active:
@@ -127,7 +138,7 @@ class Client():
                     asyncio.create_task(self.__process_server_packages()),
                     asyncio.create_task(self.__send_packages())
                 )
-            except ConnectionRefusedError as e:
+            except ConnectionRefusedError:
                 counter += 1
                 print(f"Connection refused, {counter}/3 tries")
                 if counter >= 3:

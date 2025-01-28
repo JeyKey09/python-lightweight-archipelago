@@ -69,12 +69,11 @@ class LocationInfo:
 
 @dataclass
 class RoomUpdate(RoomInfo, Connected):
-    players : List[NetworkPlayer]
-    checked_locations : List[int]
-
+    players : Optional[List[NetworkPlayer]]
+    checked_locations : Optional[List[int]]
 
 #Make subclasses of the different packets of PrintJSON
-#or mark them as optional parameters
+#or mark the other parameters as optional parameters
 @dataclass
 class PrintJSON:
     data : List[JSONMessagePart]
