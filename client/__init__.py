@@ -1,7 +1,5 @@
 from abc import abstractmethod
 import asyncio
-from enum import Enum
-import inspect
 import json 
 import uuid
 from websockets import ConnectionClosed
@@ -13,7 +11,15 @@ from .packets import  encode_packet, decode_packet
 #Import types into the namespace to be able to decode them
 from .packets.server import *
 from .packets.core import *
+import logging
+import sys
 
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.FileHandler("debug.log"), logging.StreamHandler(sys.stdout)],
+)
 
 class GameConfig:
     def __init__(self, game : str, items_handling : ItemsHandlingFlags = ItemsHandlingFlags.ReceiveItems):
@@ -53,7 +59,6 @@ class Client():
                         packages[i]["cmd"] = type(package).__name__
                     await self.connection.send(json.dumps(packages))
                 except ConnectionClosed:
-                    print("The socket ended up closing. Shutting down thread")
                     return
                 except Exception as e:
                     print(f"Something went wrong, under the process {e.args}")
@@ -75,10 +80,14 @@ class Client():
                                 )
                             
                         case Connected():
+                            logging.info("Connection established to the archipelago server")
                             self.connected = packet
                         
                         case ConnectionRefused():
-                            print(packet.errors)
+                            logging.exception("The connection was refused, may be due to wrong client info")
+                            for error in packet.errors:
+                                logging.error(error)
+                            self.active = False
 
                         case ReceivedItems():
                             if packet.index == self._item_index+1:
@@ -99,8 +108,8 @@ class Client():
                         
                         case _:
                             print(f"Unknown packet: {packet}")
+
             except ConnectionClosed:
-                print("Socket closed for a client, closing the thread to return back")
                 return
             except Exception as e:
                 print(f"Unexpected error has happened {e.args}")
@@ -138,9 +147,14 @@ class Client():
                     asyncio.create_task(self.__process_server_packages()),
                     asyncio.create_task(self.__send_packages())
                 )
+                if self.active:
+                    logging.error("The connection to the archipelago server was closed unexpected, will try to reconnect")
             except ConnectionRefusedError:
                 counter += 1
-                print(f"Connection refused, {counter}/3 tries")
+                logging.warning(f"Connection refused, {counter}/3 tries")
+                #Give some time for the server to boot up again
+                await asyncio.sleep(1)
                 if counter >= 3:
+                    logging.exception("Closing down client due to not getting access")
                     self.active = False
                  

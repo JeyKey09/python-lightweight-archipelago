@@ -4,6 +4,9 @@ import json
 from typing import Dict
 from .server import *
 from .client import *
+import inspect
+from enum import Enum
+
 
 def decode_packet(obj : dict):
     """	Filters the special packets, modifies the dictionary 
