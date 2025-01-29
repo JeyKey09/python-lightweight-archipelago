@@ -6,7 +6,7 @@ import inspect
 from enum import Enum
 
 
-def decode_packet(obj : dict):
+def decode_packet(obj : dict | list | any):
     """	Filters the special packets, modifies the dictionary 
     	and casts it into the appropriate object
             
@@ -21,7 +21,7 @@ def decode_packet(obj : dict):
         del obj["cmd" if obj.get("cmd") is not None else "class"]
         if cls == PrintJSON:
             obj = {"type": obj["type"], "data": obj["data"]} 
-        for i in filter(lambda x: isinstance(x[1], (dict, list, type(iter)))  , obj.items()):
+        for i in filter(lambda x: isinstance(x[1], (dict, list))  , obj.items()):
             obj[i[0]] = decode_packet(i[1])
         return cls(**obj)
     return obj
