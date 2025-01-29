@@ -17,8 +17,7 @@ class Version(NamedTuple):
     minor: int = 5
     build: int = 1
 
-@dataclass
-class NetworkItem:
+class NetworkItem(NamedTuple):
     item: int
     location: int
     player: int

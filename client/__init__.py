@@ -2,15 +2,16 @@ from abc import abstractmethod
 import asyncio
 import json 
 import uuid
-from websockets import ConnectionClosed
+from websockets import ConnectionClosed, State
 from websockets.asyncio.client import connect 
-from .packets.client import Connect, Sync
+from .packets.client import Connect, GetDataPackage, Sync
 from queue import Queue
 from .packets.core.enums import ItemsHandlingFlags
 from .packets import  encode_packet, decode_packet
 #Import types into the namespace to be able to decode them
 from .packets.server import *
 from .packets.core import *
+from .games import cache_exist, save_cache
 import logging
 import sys
 
@@ -22,9 +23,10 @@ logging.basicConfig(
 )
 
 class GameConfig:
-    def __init__(self, game : str, items_handling : ItemsHandlingFlags = ItemsHandlingFlags.ReceiveItems):
+    def __init__(self, game : str, items_handling : ItemsHandlingFlags = ItemsHandlingFlags.ReceiveItems, hash : str = ""):
         self.game = game
         self.items_handling = items_handling
+        self.hash = hash
 
 class ClientConfig:
     client : str = str(uuid.uuid4())
@@ -50,14 +52,14 @@ class Client():
         self._packages_to_be_sent.put(package)
     
     async def __send_packages(self):
-        while(self.active):
+        while(self.active and self._connection.state is State.OPEN):
             if not self._packages_to_be_sent.empty():
                 packages = [self._packages_to_be_sent.get() for _ in range(min(self._packages_to_be_sent.qsize(), 10))]
                 try:
                     for i,package in enumerate(packages):
                         packages[i] = encode_packet(package)
                         packages[i]["cmd"] = type(package).__name__
-                    await self.connection.send(json.dumps(packages))
+                    await self._connection.send(json.dumps(packages))
                 except ConnectionClosed:
                     return
                 except Exception as e:
@@ -65,20 +67,18 @@ class Client():
             await asyncio.sleep(0.1)
     
     async def __process_server_packages(self):
-        while(self.active):
+        while(self.active and self._connection.state is State.OPEN):
             try:
-                packets = decode_packet(json.loads(await self.connection.recv()))
+                packets = decode_packet(json.loads(await self._connection.recv()))
                 if packets is None:
                     continue
                 for packet in packets:
                     match packet: 
                         case RoomInfo():
                             self.room_info = packet
-                            self.add_package(
-                                Connect(self.client_config.password, self.game_config.game, self.client_config.player, 
-                                        self.client_config.client, self.client_config.version, self.game_config.items_handling, [], True)
-                                )
-                            
+                            self._handle_handshake()
+                        case DataPackage():
+                            self._handle_datapackage(packet)
                         case Connected():
                             logging.info("Connection established to the archipelago server")
                             self.connected = packet
@@ -92,7 +92,7 @@ class Client():
                         case ReceivedItems():
                             if packet.index == self._item_index+1:
                                 self._item_index += len(packet.items)
-                                self.resolveReceivedItem(packet)
+                                self.resolve_received_items(packet)
                             else:
                                 self._item_index = 0
                                 self.add_package(Sync())
@@ -105,14 +105,12 @@ class Client():
 
                         case PrintJSON():
                             self.handle_print(packet)
-                        
+
                         case _:
                             print(f"Unknown packet: {packet}")
 
             except ConnectionClosed:
                 return
-            except Exception as e:
-                print(f"Unexpected error has happened {e.args}")
     
     @abstractmethod
     def resolve_received_items(self, items : ReceivedItems):
@@ -134,6 +132,21 @@ class Client():
         """Function called when a PrintJSON package is sent from the server"""
         pass
 
+    def _handle_handshake(self):
+        missing_games = []
+        for game,checksum in self.room_info.datapackage_checksums.items():
+            if not cache_exist(checksum):
+                missing_games.append(game)
+        if len(missing_games) > 0:
+            self._packages_to_be_sent.put(GetDataPackage(missing_games))
+        else:
+            self._packages_to_be_sent.put(Connect(self.client_config.password, self.game_config.game, 
+                                                  self.client_config.player, self.client_config.client, 
+                                                  self.client_config.version, self.game_config.items_handling, [], True))
+    def _handle_datapackage(self, packet):
+        save_cache(packet)
+        self._handle_handshake()
+
     async def run(self):
         if not self.active:
             self.active = True
@@ -141,7 +154,7 @@ class Client():
         while(self.active):
             try:
                 #TODO: Need to steal some code from archipelago to make it work with non-secure servers or add it's own SSL
-                self.connection = await connect(f"wss://{self.client_config.address}:{self.client_config.port}")
+                self._connection = await connect(f"wss://{self.client_config.address}:{self.client_config.port}")
                 counter = 0
                 await asyncio.gather(
                     asyncio.create_task(self.__process_server_packages()),
@@ -152,7 +165,7 @@ class Client():
             except ConnectionRefusedError:
                 counter += 1
                 logging.warning(f"Connection refused, {counter}/3 tries")
-                #Give some time for the server to boot up again
+                #Wait a bit in between to not spam
                 await asyncio.sleep(1)
                 if counter >= 3:
                     logging.exception("Closing down client due to not getting access")
