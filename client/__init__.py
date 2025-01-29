@@ -8,6 +8,7 @@ from .packets.client import Connect, GetDataPackage, Sync
 from queue import Queue
 from .packets.core.enums import ItemsHandlingFlags
 from .packets import  encode_packet, decode_packet
+
 #Import types into the namespace to be able to decode them
 from .packets.server import *
 from .packets.core import *
@@ -77,12 +78,14 @@ class Client():
                         case RoomInfo():
                             self.room_info = packet
                             self._handle_handshake()
+
                         case DataPackage():
                             self._handle_datapackage(packet)
+
                         case Connected():
                             logging.info("Connection established to the archipelago server")
                             self.connected = packet
-                        
+
                         case ConnectionRefused():
                             logging.exception("The connection was refused, may be due to wrong client info")
                             for error in packet.errors:
