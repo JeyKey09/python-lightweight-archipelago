@@ -6,7 +6,7 @@ import os
 
 from client.packets.server import DataPackage
 
-_path : Path = Path(Path(__file__).parent.resolve().absolute(), "cache")
+_path : Path = Path(Path(__file__).parent.resolve().absolute(), "game_cache")
 
 _game_data_cache = {}
 if not os.path.isdir(_path):
