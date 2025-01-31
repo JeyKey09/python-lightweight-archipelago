@@ -10,8 +10,8 @@ from .packets.core.enums import ItemsHandlingFlags
 from .packets import  encode_packet, decode_packet
 
 #Import types into the namespace to be able to decode them
-from .packets.server import *
-from .packets.core import *
+from .packets.server import Connected, ConnectionRefused, DataPackage, LocationInfo, PrintJSON, ReceivedItems, RoomInfo
+from .packets.core import DataPackageObject, Version
 from .games import cache_exist, save_cache
 import logging
 import sys
@@ -130,10 +130,10 @@ class Client():
         """Function called when a locationInfo package is sent from the server"""
         pass
 
-    @abstractmethod
-    def handle_print(self, packet : PrintJSON):
+
+    def handle_print(self, packet : PrintJSON): 
         """Function called when a PrintJSON package is sent from the server"""
-        pass
+        logging.info("type: %s | data: %s", packet.type, packet.data)
 
     def _handle_handshake(self):
         missing_games = []
