@@ -6,7 +6,7 @@ import inspect
 from enum import Enum
 
 
-def decode_packet(obj : dict | list | any):
+def decode_packet(obj : dict | list):
     """	Filters the special packets, modifies the dictionary 
     	and casts it into the appropriate object
             
