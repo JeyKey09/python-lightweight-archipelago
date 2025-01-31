@@ -20,7 +20,7 @@ def decode_packet(obj : dict | list):
         cls = globals()[obj.get("cmd") or obj.get("class")]
         del obj["cmd" if obj.get("cmd") is not None else "class"]
         if cls == PrintJSON:
-            obj = {"type": obj["type"], "data": obj["data"]} 
+                obj = {"type": obj.get("type"), "data": obj.get("data")} 
         for i in filter(lambda x: isinstance(x[1], (dict, list))  , obj.items()):
             obj[i[0]] = decode_packet(i[1])
         return cls(**obj)
