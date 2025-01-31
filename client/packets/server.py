@@ -76,8 +76,13 @@ class RoomUpdate(RoomInfo, Connected):
 #or mark the other parameters as optional parameters
 @dataclass
 class PrintJSON:
+    """Contains a JSON message part and an optional type
+
+    @type: The type of the JSON message part
+    @data: The JSON message part
+    """
     data : List[JSONMessagePart]
-    type : PrintJsonType
+    type : Optional[PrintJsonType]
 
 @dataclass
 class DataPackage:
