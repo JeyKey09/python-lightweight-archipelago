@@ -1,6 +1,7 @@
 from abc import abstractmethod
 import asyncio
 import json 
+from typing import List
 import uuid
 from websockets import ConnectionClosed, State
 from websockets.asyncio.client import connect 
@@ -54,7 +55,7 @@ class Client():
     def add_package(self, package):
         self._packages_to_be_sent.put(package)
     
-    async def __send_packages(self, packets : List):
+    async def __send_packages(self, packets):
         if not isinstance(packets, list):
             packets = [packets]
         self._sender_lock.acquire()
@@ -119,7 +120,6 @@ class Client():
 
                         case PrintJSON():
                             self.handle_print(packet)
-
                         case _:
                             print(f"Unknown packet: {packet}")
 
@@ -152,11 +152,11 @@ class Client():
             if not cache_exist(checksum):
                 missing_games.append(game)
         if len(missing_games) > 0:
-            send = self.__send_packages(GetDataPackage(missing_games))
+            asyncio.create_task(self.__send_packages(GetDataPackage(missing_games)))
         else:
-            self.__send_packages(Connect(self.client_config.password, self.game_config.game, 
+            asyncio.create_task(self.__send_packages(Connect(self.client_config.password, self.game_config.game, 
                                                   self.client_config.player, self.client_config.client, 
-                                                  self.client_config.version, self.game_config.items_handling, [], True))
+                                                  self.client_config.version, self.game_config.items_handling, [], True)))
     def _handle_datapackage(self, packet):
         save_cache(packet)
         self._handle_handshake()
