@@ -169,8 +169,7 @@ class Client():
         counter = 0
         while(self.active):
             try:
-                #TODO: Need to steal some code from archipelago to make it work with non-secure servers or add it's own SSL
-                self._connection = await connect(f"{"wss" if self.client_config.ssl else "ws"}://{self.client_config.address}:{self.client_config.port}", )
+                self._connection = await connect(f"{"wss" if self.client_config.ssl else "ws"}://{self.client_config.address}:{self.client_config.port}")
                 counter = 0
                 await asyncio.gather(
                     asyncio.create_task(self.__process_server_packages()),
@@ -186,5 +185,6 @@ class Client():
                 if counter >= 3:
                     logging.exception("Closing down client due to not getting access")
                     self.active = False
-            except SSLError:
+            except SSLError as e:
+                logging.error(e)
                 self.client_config.ssl = False
