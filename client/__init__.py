@@ -1,6 +1,7 @@
 from abc import abstractmethod
 import asyncio
 import json 
+from ssl import SSLError
 from typing import List
 import uuid
 from websockets import ConnectionClosed, State
@@ -34,11 +35,12 @@ class ClientConfig:
     client : str = str(uuid.uuid4())
     version : Version = Version()
 
-    def __init__(self, port : int, player : str, password : str, address : str = "archipelago.gg"):
+    def __init__(self, port : int, player : str, password : str, address : str = "archipelago.gg", ssl : bool= True):
         self.port = port
         self.player = player
         self.password = password
         self.address = address
+        self.ssl = ssl
 
 class Client():
     def __init__(self, client_config : ClientConfig, game_config : GameConfig):
@@ -168,7 +170,7 @@ class Client():
         while(self.active):
             try:
                 #TODO: Need to steal some code from archipelago to make it work with non-secure servers or add it's own SSL
-                self._connection = await connect(f"wss://{self.client_config.address}:{self.client_config.port}")
+                self._connection = await connect(f"{"wss" if self.client_config.ssl else "ws"}://{self.client_config.address}:{self.client_config.port}", )
                 counter = 0
                 await asyncio.gather(
                     asyncio.create_task(self.__process_server_packages()),
@@ -184,4 +186,5 @@ class Client():
                 if counter >= 3:
                     logging.exception("Closing down client due to not getting access")
                     self.active = False
-                 
+            except SSLError:
+                self.client_config.ssl = False
