@@ -13,7 +13,7 @@ from .packets import  encode_packet, decode_packet
 from threading import Lock
 #Import types into the namespace to be able to decode them
 from .packets.server import Connected, ConnectionRefused, DataPackage, LocationInfo, PrintJSON, ReceivedItems, RoomInfo
-from .packets.core import DataPackageObject, Version
+from .packets.core import Version
 from .games import cache_exist, save_cache
 import logging
 import sys
