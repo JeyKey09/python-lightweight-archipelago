@@ -2,7 +2,6 @@ from abc import abstractmethod
 import asyncio
 import json 
 from ssl import SSLError
-from typing import List
 import uuid
 from websockets import ConnectionClosed, State
 from websockets.asyncio.client import connect 
@@ -11,7 +10,6 @@ from queue import Queue
 from .packets.core.enums import ItemsHandlingFlags
 from .packets import  encode_packet, decode_packet
 from threading import Lock
-#Import types into the namespace to be able to decode them
 from .packets.server import Connected, ConnectionRefused, DataPackage, LocationInfo, PrintJSON, ReceivedItems, RoomInfo
 from .packets.core import Version
 from .games import cache_exist, save_cache
