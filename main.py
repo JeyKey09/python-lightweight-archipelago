@@ -1,8 +1,10 @@
 
 import asyncio
-import threading 
 from client import Client, ClientConfig, GameConfig
 
-if __name__ == "__main__":
+async def main():
     client = Client(ClientConfig(55224, "JK", ""), GameConfig("Factorio"))
-    task = asyncio.run(client.run())
+    await client.run()
+    
+if __name__ == "__main__":
+    asyncio.run(main())
