@@ -148,9 +148,6 @@ class Client():
                     
                         case LocationInfo():
                             self.resolve_location_info(packet)
-                    
-                        case DataPackageObject():
-                            self.resolve_data_package(packet)
 
                         case PrintJSON():
                             self.handle_print(packet)
