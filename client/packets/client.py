@@ -7,6 +7,10 @@ from .core.enums import ClientStatus
 
 @dataclass
 class Connect:
+    """ Packet for connecting to the server. 
+
+        Sent as part of the handshake
+    """
     password : str
     game : str
     name : str
@@ -18,11 +22,13 @@ class Connect:
 
 @dataclass
 class ConnectUpdate:
+
     items_handling : int
     tags : List[str]
 
 @dataclass
 class Sync:
+    """ Packet sent for syncing the items with the server in a scenario where a packet was lost"""
     pass
 
 @dataclass

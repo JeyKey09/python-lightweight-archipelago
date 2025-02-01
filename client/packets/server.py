@@ -43,10 +43,14 @@ class RoomInfo():
 
 @dataclass
 class ConnectionRefused():
+    """A packet notifying the user that is can't connect"""
+    
     errors : list[str]
+    """A list of text about the errors"""
 
 @dataclass
 class Connected():
+    """"""
     team : int
     slot : int
     players : List[NetworkPlayer]
