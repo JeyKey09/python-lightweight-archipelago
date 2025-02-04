@@ -71,6 +71,14 @@ class Client():
         SHUTDOWN = 2
         SHUTTING_DOWN = 3
 
+    class SendError(Exception):
+        """ An exception that is raised when the client can't send a packet
+
+            This can be due to the connection being closed or something in the encoding process
+            If it is encoding error, the client is in a fucked state.
+        """
+        pass
+
     def __init__(self, client_config : ClientConfig, game_config : GameConfig):
         self.client_config = client_config
         self.game_config = game_config
@@ -110,9 +118,10 @@ class Client():
 
                 await self._connection.send(json.dumps(packets))
             except ConnectionClosed:
-                    return
+                    raise self.SendError("Connection was closed")
             except Exception as e:
                     logging.info(f"Something went wrong, under the process {e.args}")
+                    raise self.SendError("Something went wrong")
     
     async def _packet_sender(self):
         """ A internal routine that takes care of 
@@ -121,7 +130,11 @@ class Client():
         while((self._active or not self._packages_to_be_sent.empty()) and self._connection.state is State.OPEN):
             if self._handshake_done and not self._packages_to_be_sent.empty():
                 packages = [self._packages_to_be_sent.get() for _ in range(min(self._packages_to_be_sent.qsize(), 10))]
-                await self.__send_packages(packets=packages)
+                try:
+                    await self.__send_packages(packets=packages)
+                except self.SendError:
+                    for p in packages:
+                        self._packages_to_be_sent.put(p)
             await asyncio.sleep(0.5)
         if (self._connection.state is State.OPEN):
             await self._connection.close()
