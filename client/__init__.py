@@ -74,6 +74,7 @@ class Client():
         self._item_index = 0
         self._connection = None
         self._sender_lock = Lock()
+        self._state_lock = Lock()
         
     def add_package(self, package):
         """Adds a packet to the queue to be sent to the server"""
@@ -87,27 +88,29 @@ class Client():
         if not isinstance(packets, list):
             packets = [packets]
         self._sender_lock.acquire()
-        try:
-            for i,package in enumerate(packets):
-                packets[i] = encode_packet(package)
-                packets[i]["cmd"] = type(package).__name__
+        with self._sender_lock:
+            try:
+                for i,package in enumerate(packets):
+                    packets[i] = encode_packet(package)
+                    packets[i]["cmd"] = type(package).__name__
 
-            await self._connection.send(json.dumps(packets))
-        except ConnectionClosed:
-                return
-        except Exception as e:
-                logging.info(f"Something went wrong, under the process {e.args}")
-        self._sender_lock.release()
+                await self._connection.send(json.dumps(packets))
+            except ConnectionClosed:
+                    return
+            except Exception as e:
+                    logging.info(f"Something went wrong, under the process {e.args}")
     
     async def _packet_sender(self):
         """ A internal routine that takes care of 
             sending packets that is in the queue
         """
-        while(self._active and self._connection.state is State.OPEN):
+        while((self._active or not self._packages_to_be_sent.empty()) and self._connection.state is State.OPEN):
             if self._handshake_done and not self._packages_to_be_sent.empty():
                 packages = [self._packages_to_be_sent.get() for _ in range(min(self._packages_to_be_sent.qsize(), 10))]
                 await self.__send_packages(packets=packages)
             await asyncio.sleep(0.5)
+        if (self._connection.state is State.OPEN):
+            await self._connection.close()
 
     async def _process_server_packages(self):
         """Internal routine that takes care of the packets received from the server"""
@@ -194,14 +197,14 @@ class Client():
         if self._connection.state and self._connection.state is not State.OPEN:
             return False    
         self._active = False
-        asyncio.create_task(self._connection.close())
         return True
         
     async def run(self):
         """Starts the client to be ran"""
-        if self._active:
-            raise RuntimeError("The client is already running, stop it first")
-        self._active = True
+        with self._state_lock:
+            if self._active or self._connection.state is State.OPEN:
+                raise RuntimeError("The client is already running, stop it first")
+            self._active = True
         counter = 0
         while(self._active):
             try:
