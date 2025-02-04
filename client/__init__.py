@@ -1,5 +1,6 @@
 from abc import abstractmethod
 import asyncio
+import enum
 import json 
 from ssl import SSLError
 import uuid
@@ -64,6 +65,12 @@ class Client():
         Packets that can be sent can be found in the packets.client package.
     """
 
+    class State(enum.IntFlag):
+        """A enum class for the state of the client"""
+        RUNNING = 1
+        SHUTDOWN = 2
+        SHUTTING_DOWN = 3
+
     def __init__(self, client_config : ClientConfig, game_config : GameConfig):
         self.client_config = client_config
         self.game_config = game_config
@@ -75,6 +82,14 @@ class Client():
         self._connection = None
         self._sender_lock = Lock()
         self._state_lock = Lock()
+
+    def get_state(self):
+        if self._active:
+            return self.State.RUNNING
+        elif self._connection is not None and self._connection.state is State.OPEN:
+            return self.State.SHUTTING_DOWN
+        else:
+            return self.State.SHUTDOWN
         
     def add_package(self, package):
         """Adds a packet to the queue to be sent to the server"""
@@ -87,7 +102,6 @@ class Client():
         """
         if not isinstance(packets, list):
             packets = [packets]
-        self._sender_lock.acquire()
         with self._sender_lock:
             try:
                 for i,package in enumerate(packets):
@@ -174,6 +188,12 @@ class Client():
         logging.info("type: %s | data: %s", packet.type, packet.data)
 
     def _handle_handshake(self):
+        """Takes care of the handshake protocol. 
+        
+            Will send a Connect packet if all datapackages are present
+
+            If not it will send a GetDataPackage packet to get the missing datapackages    
+        """
         missing_games = []
         for game,checksum in self.room_info.datapackage_checksums.items():
             if not cache_exist(checksum):
