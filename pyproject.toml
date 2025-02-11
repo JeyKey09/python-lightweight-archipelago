@@ -1,7 +1,7 @@
 [project]
 name = "archipelago-lite-client"
 version = "0.1.0"
-description = "A simple client lightweight client for the Archipelago protocol"
+description = "A simple lightweight client for the Archipelago protocol"
 readme = "README.md"
 authors = [
     { name = "JeyKey09"},
