@@ -1,9 +1,17 @@
 [project]
-name = "python-lightweight-archipelago"
+name = "archipelago-lite-client"
 version = "0.1.0"
-description = "Add your description here"
+description = "A simple client lightweight client for the Archipelago protocol"
 readme = "README.md"
+authors = [
+    { name = "JeyKey09"},
+    { name = "Molnes" }
+]
 requires-python = ">=3.12"
 dependencies = [
     "websockets>=14.2",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
