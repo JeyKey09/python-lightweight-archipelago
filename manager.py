@@ -3,7 +3,7 @@ from threading import Lock
 from typing import Dict, Tuple
 import asyncio
 
-from client import Client
+from .src.archipelago_lite_client import Client
 
 
 class ClientManager:
