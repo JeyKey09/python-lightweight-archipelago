@@ -1,5 +1,16 @@
-.venv
-.vscode
-__pycache__
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
 debug.log
 game_cache
+
+# Virtual environments
+.venv
+
+# IDE files
+.vscode
