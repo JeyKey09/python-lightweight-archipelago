@@ -1,7 +1,6 @@
 """Utilities used when dealing with websocket packages in between server and client """
 
-from .server import *
-from .client import *
+from .server import PrintJSON
 import inspect
 from enum import Enum
 

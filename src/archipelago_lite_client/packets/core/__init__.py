@@ -1,6 +1,6 @@
 """Core objects used within archipelagos network protocol"""
 from dataclasses import dataclass
-from typing import Dict, List, NamedTuple, Optional, TypedDict
+from typing import Dict, List, NamedTuple, Optional
 
 from .enums import SlotType
 
