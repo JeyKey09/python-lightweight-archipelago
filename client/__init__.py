@@ -227,7 +227,7 @@ class Client():
         
             Returns bool: True if it stopped, False if it was in a state where it couldn't 
         """
-        if self._connection.state and self._connection.state is not State.OPEN:
+        if self._connection and self._connection.state is not State.OPEN:
             return False    
         self._active = False
         return True
@@ -235,27 +235,30 @@ class Client():
     async def run(self):
         """Starts the client to be ran"""
         with self._state_lock:
-            if self._active or self._connection.state is State.OPEN:
+            if self._active or (self._connection and self._connection.state is State.OPEN):
                 raise RuntimeError("The client is already running, stop it first")
             self._active = True
         counter = 0
-        while(self._active):
+        while self._active:
             try:
-                self._connection = await connect(f"{"wss" if self.client_config.ssl else "ws"}://{self.client_config.address}:{self.client_config.port}")
+                self._connection = await connect(f"{'wss' if self.client_config.ssl else 'ws'}://{self.client_config.address}:{self.client_config.port}")
                 counter = 0
                 await asyncio.gather(
                     asyncio.create_task(self._process_server_packages()),
                     asyncio.create_task(self._packet_sender())
                 )
                 if self._active:
-                    logging.error("The connection to the archipelago server was closed unexpected, will try to reconnect")
+                    logging.error("The connection to the archipelago server was closed unexpectedly, will try to reconnect")
             except ConnectionRefusedError:
                 counter += 1
                 logging.warning(f"Connection refused, {counter}/3 tries")
-                #Wait a bit in between to not spam
+                # Wait a bit in between to not spam
                 await asyncio.sleep(1)
                 if counter >= 3:
                     logging.exception("Closing down client due to not getting access")
                     self._active = False
             except SSLError:
                 self.client_config.ssl = False
+            except Exception as e:
+                logging.exception(f"An unexpected error occurred: {e}")
+                self._active = False
