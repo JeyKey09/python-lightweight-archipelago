@@ -35,4 +35,6 @@ jobs:
           automatic_release_tag: "latest"
           prerelease: true
           title: "Development Build"
-          files: package.tar.gz archipelago_lite_client-0.1.0-py3-none-any.whl
+          files: |
+            package.tar.gz
+            archipelago_lite_client-0.1.0-py3-none-any.whl
