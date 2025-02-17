@@ -2,8 +2,8 @@ name: Build and Publish Package
 
 on:
   push:
-    tags:        
-      - '*'
+    tags:
+      - "*"
 
 jobs:
   build:
@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version-file: "pyproject.toml"
-          
+
       - name: Install the project
         run: uv sync --all-extras --dev
 
@@ -29,34 +29,13 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: "marvinpinto/action-automatic-releases@latest"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            See the latest changes in the changelog.
-            [Changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/*
-          asset_name: package.tar.gz
-          asset_content_type: application/gzip
-
-      - name: Upload Wheel Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/*.whl
-          asset_name: archipelago_lite_client-0.1.0-py3-none-any.whl
-          asset_content_type: application/zip
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files:
+            [package.tar.gz, archipelago_lite_client-0.1.0-py3-none-any.whl]
