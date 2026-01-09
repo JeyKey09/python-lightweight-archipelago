@@ -1,17 +1,37 @@
 [project]
 name = "archipelago-lite-client"
-version = "0.1.0"
+version = "0.1.1"
 description = "A simple lightweight client for the Archipelago protocol"
+keywords = ["Archipelago", "client"]
 readme = "README.md"
 authors = [
     { name = "JeyKey09"},
     { name = "Molnes" }
 ]
+
 requires-python = ">=3.12"
 dependencies = [
     "websockets>=14.2",
 ]
 
+
+license = "MIT"
+license-files = ["LICENSE"]
+
+
+classifiers = [
+		"Development Status :: 3 - Alpha",
+		"Intended Audience :: Developers",
+
+		"License :: OSI Approved :: MIT License",
+		"Programming Language :: Python :: 3",
+]
+
+[project.urls]
+Repository = "https://github.com/JeyKey09/python-lightweight-archipelago"
+Issues = "https://github.com/JeyKey09/python-lightweight-archipelago/issues"
+
+
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.8.7,<0.9.0"]
+build-backend = "uv_build"
